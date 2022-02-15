@@ -266,7 +266,8 @@ public class NomeService : INomeService
 ```
 
 ### **WEB.Reference**  
-> Primeiro adicionamos o caminho dos metods com o _mause_ podemos adicionar o service reference (**WCF**)
+> Primeiro adicionamos a referencia do serviço no Projeto proxy em Service Reference com o nome Schema.NomeService (Acesso.UsuarioService)
+> Depois no app.Config trocamos o bindingConfiguration para "basicHttp" que é o nosso bind padrão.
 
 ### **WEB.Proxy**
 - **Caminho:** SCHEMA
