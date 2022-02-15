@@ -266,24 +266,24 @@ public class NomeService : INomeService
 ```
 
 ### **WEB.Reference**  
+
 > Primeiro adicionamos a referencia do serviço no Projeto proxy em Service Reference com o nome Schema.NomeService (Acesso.UsuarioService)
 > Depois no app.Config trocamos o bindingConfiguration para "basicHttp" que é o nosso bind padrão.
 
 ### **WEB.Proxy**
 - **Caminho:** SCHEMA
-- **Reference:** SCHEMA.DescricaoService
-> Aqui herdamos os metodos da BLL, orbigatorio adicionar o static para nao instanciar
+> Aqui herdamos os metodos do Serviço, orbigatorio adicionar o static para nao instanciar
 
 ```c#
-public static UsuarioCadastroDto PesquisarId(int dtoPesquisaId)
+public static IList<UsuarioDto> PesquisarId(int dtoPesquisa)
         {
-            UsuarioCadastroDto retorno = new UsuarioCadastroDto();
-            UsuarioServiceClient client = null;
+            IList<UsuarioDto> retorno = new IList<UsuarioDto>();
+            IList<UsuarioDto> client = null;
 
             try
             {
                 client = new UsuarioServiceClient();
-                retorno = client.PesquisarId(dtoPesquisaId);
+                retorno = client.PesquisarId(dtoPesquisa);
             }
             finally
             {
