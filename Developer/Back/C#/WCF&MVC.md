@@ -1,3 +1,4 @@
+
 # Arquitetura em WCF - Service e MCV 
 
 **Desenho das camadas da arquitetura**
@@ -275,7 +276,7 @@ public class NomeService : INomeService
 > Aqui herdamos os metodos do Serviço, orbigatorio adicionar o static para nao instanciar
 
 ```c#
-public static IList<UsuarioDto> PesquisarId(int dtoPesquisa)
+public static IList<UsuarioDto> Pesquisar(int dtoPesquisa)
         {
             IList<UsuarioDto> retorno = new IList<UsuarioDto>();
             IList<UsuarioDto> client = null;
@@ -336,9 +337,10 @@ public JsonResult Pesquisar(UsuarioPesquisaDto dtoPesquisa)
 ```
 
 ### **WEB.Pages.Views**
-- **Caminho front:** Views/Nome/Tela.cshtml
-- **Caminho javascript:** Script/adicional/schema/nome.js
-> o front (cshtml) chama um javascript que por sua vez acessa o _Controller_ para enviar os dados por **Ajax** e depois receber eles tratados
+- **Caminho front:** Views/Usuario/Consulta.cshtml
+- - **Caminho model:** Model/Acesso/UsuarioConsultaViewModel.cs
+- **Caminho javascript:** Script/adicional/acesso/usuario.js
+> o front (cshtml) chama um javascript que por sua vez acessa o _Controller_ para enviar os dados por **Ajax** e depois receber eles em formato Json
 ```html
 <!-- Adiciona o caminho do javascript para executar-->
 <script src="~/Scripts/adicional/acesso/usuario.js"></script>
