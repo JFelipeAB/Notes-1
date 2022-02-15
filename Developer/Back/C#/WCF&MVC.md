@@ -1,49 +1,35 @@
-# **WCF** Windows Communication Foundation
-- **Instalar** Componentes individuais > Windows Communication Foundation
-- **Criar** Novo projeto do tipo, "Aplicativo Web ASP .NET (.NET Framework)"
-- **Dao** Objeto responsavel pelo retorno do serviço, nele criamos e passamos o formato da resposta.
-``` c#
-[DataContract]
-public class Cliente
-{
-    [DataMember]
-    public string Nome { get;set; }
+# Arquitetura em WCF - Service e MCV 
 
-    [DataMember]
-    public string Cpf { get; set; }
-}
+**Desenho das camadas da arquitetura**
+
+```mermaid
+graph LR
+A --> D
+A(DataBase - SQL) --> B(WCF - Bll +Service)
+B --> A
+B --> D((Comuns - DTO))
+B --> C(WEB - Proxy + MVC)
+C --> B
+C --> D
 ```
-- **Interface**
-```c#
-[ServiceContract]
-public interface IClienteService
-{
 
-    [OperationContract]
-    void Add(Cliente c);
 
-    [OperationContract]
-    Cliente Buscar(string nome);
-}
-```
----
+### **Camada WEB** 
+ > MVC  **design patterns** de modelo de aplicação web. Adicionamos as ferramentas WEB como o javascript, html, ajax ...
+ 
+ > Proxy Consumimos os serviços/API que iremos utiliar
 
-## **WCF & MVC**
+### **Camada WCF**
+> Bll é a camada de negocio(business) onde trabalhamos as variaveis (entity), interface, classe, conexão com o banco (data.interface / data.nhibernate), dal, bll, injecao
 
-**NAO PASSA
-MOS ENTITYDADE PARA TELA SO DTO**
+> WCF - Windows Communication Foundation FrameWork que permite a criação de serviços web
 
-### **WEB** file
- > Nele adicionamos as camadas do MVC juntos das ferramentas WEB como o javascript, html, ...
-
-### **WCF** file
-> Camada de negocio onde trabalhamos as variaveis (entity), interface, classe, conecao com o banco (data.interface / data.nhibernate), dal, bll, injecao
-
-### **Common** 
-> Dentro de common adicionamos classe para criar as variaveis necessarias nos metodos e elas vao transitar entre o WCF e o WEB
+### **Camada Commons** 
+> Dentro da camada common adicionamos as classe que seram referenciadas por todos os outros projetos como os DTO (data transfer object), responsaveis por transitar os dados entre as camadas.
+NAO PASSAMOS ENTIDADE PARA TELA E SIM DTO
 
 ### **ORDEM INICIO APP WEB**
-1. Controller: Incia aplicacao por padrao pelo Index
+1. Controller: Incia aplicação por padrão pelo Index
 2. View: Tras a pagina com html, css...
 3. Controller: o html chama uma API pelo controller e ele repassa
 4. Model: aqui tratamos os dados 
@@ -53,26 +39,52 @@ MOS ENTITYDADE PARA TELA SO DTO**
 <a onclick="Evento();" id="Unico" href="~/Controller">Link</a>
 ```
 -    - Esse "Controller" dentro de "href" aponta para um cshtml dentro do "View" "**_return View("NOME");_** " aqui temos o nome do arquivo cshtml sem precisar da extensao
-7. Javascript: faz a chamada para o controller dos metodos criados no WCF      
 
+# Passo a Passo       
+
+### Criando uma consulta de Usuário no Schema (módulo) Acesso
+
+
+### **Comunns.Business.Dto**
+
+##### **- Primeiro Criamos os DTOs que usaremos neste processo**
+>UsuarioPesquisaDTO que tera os filtros que o user seleiconar na tela.
+>UsuarioDTo que trará os dados completos dos usuários pesquisados. 
+
+``` c#
+public class UsuarioDto  
+{  
+	public int IdUsuario { get; set; }  
+	public string LoginUsuario { get; set; }  
+	public string NomePessoa { get; set; }  
+}
+```
+
+``` c#
+public class UsuarioPesquisaDto  
+{  
+	public string LoginUsuario { get; set; }  
+	public string NomePessoa { get; set; }  
+}
+```
+
+---
 ### **WCF.Business.Entity**
-- **BusinessDto/Schema**
+#### **Criando as entidades semelhante as do banco**
+
+
 > Salvamos as tabelas presentes no banco que usamos, As **_foreign key_** devem ser criadas em outra _Entity_ para serem instancidas, Primeira letra maiuscula, adiciona o _{ get; set; }_ e adicionar _**virtual**_ para funcionar com as transacoes WEB
 ``` c#
-public class Usuario
-    {
-        // primary key
-        public virtual int? Id { get; set; }
-        public virtual string PassUsuario { get; set; }
-        public virtual string LoginUsuario { get; set; }
-        // foreign key
-        public virtual Pessoa.Pessoa Pessoa { get; set; }
-    }
-/// Salvar uma nova pessoa
-Usuario retorno = new Usuario();
-retorno.Pessoa = new Pessoa.Pessoa() {
-	Id = dto.Pessoa// salvamos apenas o ID mas poderiamos ter salvo qual quer coisa
-};
+public class Usuario  
+{  
+	// primary key  
+	public virtual int IdUsuario { get; set; }  
+	public virtual string Senha { get; set; }  
+	public virtual string Login { get; set; }  
+	public virtual int CodigoSAP { get; set; }  
+	// foreign key  
+	public virtual Pessoa.Pessoa Pessoa { get; set; }  
+}
 ```
 
 ### **WCF.DataInterface**
@@ -100,7 +112,7 @@ public class UsuarioDal : DalHelper<Usuario>, IUsuarioDal
 ```
 - **Maps/SCHEMA**  
 > Aqui apresentamos para o **Entity** para nossas tabelas no banco
-**ATENCAO:** Quando fazemos referencia de outra tabela como lista nao podemos usar o LIST mas sim o **ILIST**
+**ATENÇÃO:** Quando fazemos referência de outra tabela como lista nao podemos usar o LIST mas sim o **ILIST**
 
 ``` c#
 // EX: Maps
@@ -129,12 +141,7 @@ using FluentNHibernate.Mapping;
             .Length(255)
             .Not
             .Nullable();
-	    
-	this.HasMany(x => x.ListaPerfil)
-	    .Cascade
-	    .AllDeleteOrphan()
-	    .Inverse()
-	    .KeyColumn("Funcionalidade");
+	    	
     }
 }
 ```
@@ -161,17 +168,30 @@ public class UsuarioBll : IUsuarioBll
         public IList<UsuarioListaDto> Pesquisar(UsuarioPesquisaDto dtoPesquisa)
         {
             IList<UsuarioListaDto> retorno = new List<UsuarioListaDto>();
-            // CODIGO
+            // CODIGO REGRA
+            //Criar Conversor
+			
+			if (String.IsNullOrEmpty(dtoPesquisa.NomePessoa) & String.IsNullOrEmpty(dtoPesquisa.LoginUsuario))  
+				retorno = UsuarioDal.Pesquisar()  
+					.Select(u => new 	ConversorUsuario().ConverterPesquisa(u))
+					.ToList();
+ 
+			else if (String.IsNullOrEmpty(dtoPesquisa.NomePessoa))  
+				retorno = UsuarioDal.Pesquisar()  
+					.Where(u => u.Login == dtoPesquisa.LoginUsuario)  
+					.Select(u => new ConversorUsuario().ConverterPesquisa(u))	
+					.ToList();  
+			else  
+				retorno = UsuarioDal.Pesquisar()  
+						.Where(u => u.Pessoa.Nome == dtoPesquisa.NomePessoa)  
+						.Select(u => new ConversorUsuario().ConverterPesquisa(u))
+						.ToList();
 
             return retorno;
         }
     }
 ```
-**IQueryable**
-> Cria um sql sem executar podendo referenciar ao Entity como _class_ e usar os metodos do **DalHelper**
-``` c#
-IQueryable<Usuario> query = this.UsuarioDal.Pesquisar();
-```
+
 
 ### **WCF.ServicesInjecaoDependencia**
 - **Modules/Business:** 
@@ -214,20 +234,20 @@ public class InfrastructureSetup
 ```
 
 ### **WCF.Services:**
-- **SCHEMA**
-> Aqui adicionamos a chamada dos Objetos da camada de negocio 
+> Aqui chamamos os métodos da camada de negocio costumamos colocar os mesmos metodos e nomes que na BLL.
 
-***lEMBRE-SE QUE PARA ADICIONAR O WCF SERVICE TEMOS QUE COMENTAR O _ninject_ DENTRO DO  Web.config DO Services***
+>  Adicionamos um novo Serviço ao projeto em o **"WCF Service"**, criamos a pasta do Schema,  e adicionamos novo item WCF Service, com o nome UsuarioService.svc
 
-- **Criando:** Com o mause adicionamos o **"WCF Service"**
+***LEMBRE-SE QUE PARA ADICIONAR O WCF SERVICE TEMOS QUE COMENTAR O _ninject_ DENTRO DO  Web.config DO Services***
+
 
 ```c#
 // Interface
 [ServiceContract]
-	public interface INomeService
+	public interface IUsuarioService
 	{
         [OperationContract]
-        Metodo; // so adicionar um metodo aq ex:IList<Usuario> PesquisarUsuarioLogin(UsuarioPesquisaDto dto);
+       IList<UsuarioListaDto> Pesquisar(UsuarioPesquisaDto dtoPesquisa);				
  }
 ```
 ``` c#
@@ -236,11 +256,11 @@ public class InfrastructureSetup
 public class NomeService : INomeService
 {
     [Inject]
-    public INomeBll NomeBll { get; set; }
+    public IUsuarioBll usuarioBll { get; set; }
 
-    public IList<Usuario> PesquisarUsuarioLogin(UsuarioPesquisaDto dto)
+    public IList<UsuarioListaDto> Pesquisar(UsuarioPesquisaDto dtoPesquisa)
     {
-        return this.UsuarioBll.PesquisarUsuarioLogin(dto);
+        return this.usuarioBll.Pesquisar(dtoPesquisa);
     }
 }
 ```
@@ -347,17 +367,3 @@ var pesquisar = function () {
 }
 ```
 
-### **WCF.Business.Dto**
-
-- **Caminho:** BusinessDto/Schema
--  **DTO:** data transfere object
->Camada onde criamos as variaveis para cada metodo da Bll com base no que vai receber da WEB, Primeira letra maiuscula e adiciona o _{ get; set; }_
-
-``` c#
-public class UsuarioListaDto
-    {
-        public int Id { get; set; }
-        public string LoginUsuario { get; set; }
-        public string NomePessoa { get; set; }
-    }
-```
