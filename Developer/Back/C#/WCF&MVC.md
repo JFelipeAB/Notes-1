@@ -276,7 +276,7 @@ public class NomeService : INomeService
 > Aqui herdamos os metodos do Serviço, orbigatorio adicionar o static para nao instanciar
 
 ```c#
-public static IList<UsuarioDto> Pesquisar(int dtoPesquisa)
+public static IList<UsuarioDto> Pesquisar(UsuarioPesquisaDto dtoPesquisa)
         {
             IList<UsuarioDto> retorno = new IList<UsuarioDto>();
             IList<UsuarioDto> client = null;
@@ -319,9 +319,19 @@ public static IList<UsuarioDto> Pesquisar(int dtoPesquisa)
 
 ### **WEB.Pages.Controllers** 
 - **Controllers/SCHEMA/NomeController.cs**
-> Aqui criamos os metodos que vao ser usados pelo front
+> Nas Controllers criamos os métodos que vão ser requisitados por AJAX e os direcionamento das páginas
+
 ```c#
-public JsonResult Pesquisar(UsuarioPesquisaDto dtoPesquisa)
+public ActionResult Index()   //Direcionamento da pagina inicial
+{  
+	UsuarioConsultaViewModel model = new UsuarioConsultaViewModel();  
+	return View("Consulta", model);  
+}
+```
+
+
+```c#
+public JsonResult Pesquisar(UsuarioPesquisaDto dtoPesquisa)//Metodo de Pesquisa
         {
             IList<UsuarioListaDto> dto = UsuarioProxy.Pesquisar(dtoPesquisa);
             return new JsonResult()
@@ -336,37 +346,135 @@ public JsonResult Pesquisar(UsuarioPesquisaDto dtoPesquisa)
         }
 ```
 
+
+
 ### **WEB.Pages.Views**
 - **Caminho front:** Views/Usuario/Consulta.cshtml
-- - **Caminho model:** Model/Acesso/UsuarioConsultaViewModel.cs
+-  **Caminho model:** Model/Acesso/UsuarioConsultaViewModel.cs
 - **Caminho javascript:** Script/adicional/acesso/usuario.js
-> o front (cshtml) chama um javascript que por sua vez acessa o _Controller_ para enviar os dados por **Ajax** e depois receber eles em formato Json
+> Os botões da página (cshtml) chamam o javascript que por sua vez acessa o _Controller_ para enviar os dados por **Ajax** e depois receber eles em formato Json
 ```html
-<!-- Adiciona o caminho do javascript para executar-->
+<!-- Adicionar a referência ao javascript para chamar os metodos-->
 <script src="~/Scripts/adicional/acesso/usuario.js"></script>
 ```
+>Botão no HTML para pesquisar usuario
+
 ``` html
 <!-- Usei um botao para exemplificar como iriamos chamar o metodo   -->
 <div class="div-botao">
     <button type="button" class="btn btn-primary" onclick="usuario.pesquisar(); return false;">Pesquisar</button>
 </div>
 ```
-``` javascript
-var pesquisar = function () {
-    $.ajax({
-                type: "POST",
-                url: base_path + "Usuario/Pesquisar", //caminho do controller
-                data: { // dados
-                    'dtoPesquisa': getFiltros() //outro metodo que usa os id do html para apontar os inputs com dados
-                },
-                cache: false,
-                complete: function (XMLHttpRequest, textStatus) {
-                }
-            }).done(function (data) {
-                // adiciona function para mostrar os dados ou devolver um popup com o ok
-            }).fail(function (XMLHttpRequest, textStatus, errorThrown) {
-                // adiciona function que devolve um popup com o erro
-            });
-}
-```
+>Funções do java Scrip: 
 
+``` javascript
+var usuario = function () {  
+
+	var controles = function () {
+		return { //id dos campos
+			txtNome: "#txtNome",  
+			txtLogin: "#txtLogin",  
+			divUsuario: "#divUsuario",  
+			divTabelaUsuarioConsulta: "#tabela_usuario_consulta"  
+		};  
+	}
+	
+	var getFiltros = function () {
+		var dtoPesquisa = {  
+			NomePessoa: $(controles().txtNome).val(), 
+			LoginUsuario: $(controles().txtLogin).val() 
+		};
+		return dtoPesquisa;  
+	}
+	
+	var pesquisar = function () {
+		mostrarLoading();  
+		$.ajax({  
+		type: "POST",  
+		url: base_path + "Usuario/Pesquisar",  
+		data: {  
+			'dtoPesquisa': getFiltros()  
+		},  
+		cache: false,  
+		complete: function (XMLHttpRequest, textStatus) {  
+			removerLoading();  
+			}  
+		}).done(function (data) {  
+			carregarTabela(data.dto);  
+		}).fail(function (XMLHttpRequest, textStatus, errorThrown) {  
+			mostrarErroPopup('Problemas ao carregar a pesquisa de pessoas. ' + errorThrown);  
+		});  
+	}
+	
+	var carregarTabela = function (data) {  	
+		$tabelaListaUsuario = $(controles().divTabelaUsuarioConsulta).DataTable({  
+		dom: 'Bfrtip',  
+		buttons: ['excelHtml5'],  
+		data: data,  
+		destroy: true,  
+		filter: false,  
+		info: false,  
+		paginate: true,  
+		paginationType: 'full_numbers',  
+		lengthChange: false,  
+		iDisplayLength: 10,  
+		language: {  
+		processing: 'Processando...',  
+		zeroRecords: 'Nenhum registro encontrado.',  
+		paginate: {  
+			first: '&laquo;',  
+			previous: '<',  
+			next: '>',  
+			last: '&raquo;'  
+		}  
+		},  
+			order: [[0, 'asc']],  
+			columns: [  
+			{  
+				data: 'IdUsuario', //tem q ser o mesmo UsuarioListaDto  
+				title: 'Código',  
+				sortable: true,  
+				width: '10%'  
+			},  
+			{  
+				data: 'LoginUsuario',  
+				title: 'Login',  
+				sortable: true,  
+				width: '10%'  
+			},  
+			{  
+				data: 'NomePessoa',  
+				title: 'Nome',  
+				sortable: true,  
+				width: '10%'  
+			},  
+			{  
+				data: null,  
+				title: 'A&ccedil;&otilde;es',  
+				'class': 'centro',  
+				sortable: false,  
+				width: "10%",  
+				render: function (data) {
+					var html =  
+					"<a title='Visualizar' data-toggle='tooltip' onclick='pessoa.visualizar(this); return false;' data-original-title='Visualizar' style='padding:3px;'>"  
+					+ "<span class='glyphicon glyphicon-search'></span>"  
+					+ "</a>"
+					+ 
+					+ "<a title='Editar' data-toggle='tooltip' onclick='pessoa.editar(this); return false;' data-original-title='Editar' style='padding:3px;'>"  
+					+ "<span class='glyphicon glyphicon-pencil'></span>"  
+					+ "</a>"
+					+ 
+					+ "<a title='Excluir' data-toggle='tooltip' onclick='pessoa.confirmarExclusao(this); return false;' data-original-title='Excluir' style='padding:3px;'>"  
+					+ "<span class='glyphicon glyphicon-remove'></span>"  
+					+ "</a>";
+				return html;  
+				}  
+			}  
+		]  
+		})  
+	}
+	return {  
+		pesquisar: pesquisar  
+	}  
+}();
+```
